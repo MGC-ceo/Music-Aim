@@ -1,3 +1,7 @@
+/* =========================================================
+   🎮 AIM RHYTHM GAME — FULL CORE SCRIPT (CLEAN VERSION)
+   ========================================================= */
+
 /* ================= GLOBAL ================= */
 let currentUser = null;
 
@@ -38,17 +42,17 @@ function login(){
 }
 
 /* ================= SETTINGS ================= */
-document.getElementById("volume").value =
-  localStorage.getItem("volume") || 50;
+const volumeSlider = document.getElementById("volume");
+const vfxToggle = document.getElementById("vfxToggle");
 
-document.getElementById("vfxToggle").checked =
-  localStorage.getItem("vfx") === "true";
+volumeSlider.value = localStorage.getItem("volume") || 50;
+vfxToggle.checked = localStorage.getItem("vfx") === "true";
 
-document.getElementById("volume").oninput = e => {
+volumeSlider.oninput = e => {
   localStorage.setItem("volume", e.target.value);
 };
 
-document.getElementById("vfxToggle").onchange = e => {
+vfxToggle.onchange = e => {
   localStorage.setItem("vfx", e.target.checked);
 };
 
@@ -60,9 +64,9 @@ function backToMenu(){ showScreen(screens.menu); }
 
 /* ================= MAP SYSTEM ================= */
 const maps = [
-  { name: "Feels", time: 190, speed: 1 },
-  { name: "Invincible", time: 280, speed: 1 },
-  { name: "Spoil", time: 220, speed: 1 }
+  { name: "Feels", time: 190, file: "assets/music/feels.mp3" },
+  { name: "Invincible", time: 280, file: "assets/music/invincible.mp3" },
+  { name: "Spoil", time: 220, file: "assets/music/spoil.mp3" }
 ];
 
 let currentMapIndex = 0;
@@ -94,18 +98,14 @@ const difficultySpeeds = {
 
 let currentDifficulty = "easy";
 
-/* ================= GAME ================= */
+/* ================= CANVAS ================= */
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-
-let targets = [];
-let misses = 0;
-let perfectHits = 0;
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-/* CURSOR */
+/* ================= CURSOR ================= */
 let mouse = { x: 0, y: 0 };
 
 window.addEventListener("mousemove", e => {
@@ -113,91 +113,18 @@ window.addEventListener("mousemove", e => {
   mouse.y = e.clientY;
 });
 
-/* SPAWN TARGETS */
-function spawnTarget(){
-  targets.push({
-    x: Math.random() * canvas.width,
-    y: 0,
-    size: 20,
-    speed: 2
-  });
-}
-
-/* GAME LOOP */
-function gameLoop(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  /* DRAW TARGETS */
-  targets.forEach((t, i) => {
-    t.y += t.speed * difficultySpeeds[currentDifficulty];
-
-    ctx.fillStyle = "red";
-    ctx.fillRect(t.x, t.y, t.size, t.size);
-
-    if(t.y > canvas.height){
-      targets.splice(i,1);
-      misses++;
-    }
-  });
-
-  /* DRAW CURSOR (CIRCLE) */
-  ctx.beginPath();
-  ctx.arc(mouse.x, mouse.y, 15, 0, Math.PI*2);
-  ctx.fillStyle = "white";
-  ctx.fill();
-
-  requestAnimationFrame(gameLoop);
-}
-
-/* CLICK DETECTION */
-canvas.addEventListener("click", () => {
-  targets.forEach((t, i) => {
-    if(
-      mouse.x > t.x &&
-      mouse.x < t.x + t.size &&
-      mouse.y > t.y &&
-      mouse.y < t.y + t.size
-    ){
-      targets.splice(i,1);
-      perfectHits++;
-    }
-  });
-});
-
-/* START GAME */
-function startGame(){
-  document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
-  canvas.style.display = "block";
-
-  setInterval(spawnTarget, 800);
-  gameLoop();
-
-  setTimeout(endGame, maps[currentMapIndex].time * 1000);
-}
-const music = new Audio("assets/music/feels.mp3");
-music.volume = localStorage.getItem("volume") / 100;
-music.play();
-
-/* END GAME */
-function endGame(){
-  canvas.style.display = "none";
-
-  saveScore();
-
-  alert(`Game Over!\nHits: ${perfectHits}\nMisses: ${misses}`);
-
-  location.reload();
-}
-/* ================= RHYTHM GAME CORE ================= */
-
+/* ================= RHYTHM SYSTEM ================= */
 let notes = [];
 let gameStartTime = 0;
-let hitWindow = 300; // ms timing window
+let misses = 0;
+let perfectHits = 0;
+
+const hitWindow = 300;
 
 const centerX = canvas.width / 2;
 const centerY = canvas.height / 2;
 
-/* NOTE FORMAT */
+/* CREATE NOTES */
 function spawnNote(delay){
   notes.push({
     spawnTime: gameStartTime + delay,
@@ -207,16 +134,16 @@ function spawnNote(delay){
   });
 }
 
-/* SIMPLE TEST MAP (later we sync to music) */
+/* LOAD MAP (TEMP PATTERN) */
 function loadMap(){
   notes = [];
-  
-  for(let i = 0; i < 50; i++){
-    spawnNote(i * 800); // rhythm spacing
+
+  for(let i = 0; i < 60; i++){
+    spawnNote(i * (800 / difficultySpeeds[currentDifficulty]));
   }
 }
 
-/* GAME LOOP */
+/* ================= GAME LOOP ================= */
 function gameLoop(){
   let now = Date.now();
 
@@ -228,12 +155,14 @@ function gameLoop(){
     if(timeDiff > 0 && !note.hit){
       let progress = timeDiff / 1000;
 
-      note.radius = 10 + progress * 100;
+      note.radius = 10 + progress * 120;
 
-      /* DRAW NOTE */
+      /* NOTE COLOR SYSTEM */
+      let colors = ["crimson","red","#ff4d4d","lightblue","blue","navy","purple"];
+      ctx.strokeStyle = colors[Math.floor(Math.random()*colors.length)];
+
       ctx.beginPath();
       ctx.arc(centerX, centerY, note.radius, 0, Math.PI*2);
-      ctx.strokeStyle = "red";
       ctx.stroke();
 
       /* MISS */
@@ -253,12 +182,12 @@ function gameLoop(){
   requestAnimationFrame(gameLoop);
 }
 
-/* CLICK TIMING SYSTEM */
+/* ================= CLICK SYSTEM ================= */
 canvas.addEventListener("click", () => {
   let now = Date.now();
 
-  notes.forEach(note => {
-    if(note.hit) return;
+  for(let note of notes){
+    if(note.hit) continue;
 
     let diff = Math.abs(now - note.spawnTime);
 
@@ -267,26 +196,47 @@ canvas.addEventListener("click", () => {
 
       if(diff < 100){
         perfectHits++;
-        console.log("Perfect");
-      } else {
-        console.log("Good");
       }
+
+      break;
     }
-  });
+  }
 });
 
-/* START GAME */
+/* ================= START GAME ================= */
 function startGame(){
   document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
   canvas.style.display = "block";
+
+  /* RESET */
+  misses = 0;
+  perfectHits = 0;
 
   gameStartTime = Date.now();
 
   loadMap();
   gameLoop();
 
-  setTimeout(endGame, maps[currentMapIndex].time * 1000);
+  /* MUSIC */
+  const map = maps[currentMapIndex];
+  const music = new Audio(map.file);
+  music.volume = (localStorage.getItem("volume") || 50) / 100;
+  music.play();
+
+  setTimeout(endGame, map.time * 1000);
 }
+
+/* ================= END GAME ================= */
+function endGame(){
+  canvas.style.display = "none";
+
+  saveScore();
+
+  alert(`Game Over!\nPerfect Hits: ${perfectHits}\nMisses: ${misses}`);
+
+  location.reload();
+}
+
 /* ================= LEADERBOARD ================= */
 function saveScore(){
   let data = JSON.parse(localStorage.getItem("leaderboard") || "[]");
