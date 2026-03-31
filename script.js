@@ -185,7 +185,105 @@ function endGame(){
 
   location.reload();
 }
+/* ================= RHYTHM GAME CORE ================= */
 
+let notes = [];
+let gameStartTime = 0;
+let hitWindow = 300; // ms timing window
+
+const centerX = canvas.width / 2;
+const centerY = canvas.height / 2;
+
+/* NOTE FORMAT */
+function spawnNote(delay){
+  notes.push({
+    spawnTime: gameStartTime + delay,
+    hit: false,
+    radius: 10,
+    maxRadius: 60
+  });
+}
+
+/* SIMPLE TEST MAP (later we sync to music) */
+function loadMap(){
+  notes = [];
+  
+  for(let i = 0; i < 50; i++){
+    spawnNote(i * 800); // rhythm spacing
+  }
+}
+
+/* GAME LOOP */
+function gameLoop(){
+  let now = Date.now();
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  notes.forEach(note => {
+    let timeDiff = now - note.spawnTime;
+
+    if(timeDiff > 0 && !note.hit){
+      let progress = timeDiff / 1000;
+
+      note.radius = 10 + progress * 100;
+
+      /* DRAW NOTE */
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, note.radius, 0, Math.PI*2);
+      ctx.strokeStyle = "red";
+      ctx.stroke();
+
+      /* MISS */
+      if(note.radius > note.maxRadius){
+        note.hit = true;
+        misses++;
+      }
+    }
+  });
+
+  /* CURSOR */
+  ctx.beginPath();
+  ctx.arc(mouse.x, mouse.y, 12, 0, Math.PI*2);
+  ctx.fillStyle = "white";
+  ctx.fill();
+
+  requestAnimationFrame(gameLoop);
+}
+
+/* CLICK TIMING SYSTEM */
+canvas.addEventListener("click", () => {
+  let now = Date.now();
+
+  notes.forEach(note => {
+    if(note.hit) return;
+
+    let diff = Math.abs(now - note.spawnTime);
+
+    if(diff < hitWindow){
+      note.hit = true;
+
+      if(diff < 100){
+        perfectHits++;
+        console.log("Perfect");
+      } else {
+        console.log("Good");
+      }
+    }
+  });
+});
+
+/* START GAME */
+function startGame(){
+  document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
+  canvas.style.display = "block";
+
+  gameStartTime = Date.now();
+
+  loadMap();
+  gameLoop();
+
+  setTimeout(endGame, maps[currentMapIndex].time * 1000);
+}
 /* ================= LEADERBOARD ================= */
 function saveScore(){
   let data = JSON.parse(localStorage.getItem("leaderboard") || "[]");
