@@ -1,5 +1,5 @@
 /* =========================================================
-   🎮 AIM RHYTHM GAME — FULL CORE SCRIPT (CLEAN VERSION)
+   🎮 AIM RHYTHM GAME — FULL CORE SCRIPT (MOVEMENT VERSION)
    ========================================================= */
 
 /* ================= GLOBAL ================= */
@@ -121,20 +121,21 @@ let perfectHits = 0;
 
 const hitWindow = 300;
 
-const centerX = canvas.width / 2;
-const centerY = canvas.height / 2;
-
-/* CREATE NOTES */
+/* ================= SPAWN NOTES ================= */
 function spawnNote(delay){
   notes.push({
     spawnTime: gameStartTime + delay,
     hit: false,
     radius: 10,
-    maxRadius: 60
+    maxRadius: 60,
+
+    // 🔥 RANDOM POSITION (MAIN FEATURE)
+    x: Math.random() * (canvas.width - 100) + 50,
+    y: Math.random() * (canvas.height - 100) + 50
   });
 }
 
-/* LOAD MAP (TEMP PATTERN) */
+/* ================= LOAD MAP ================= */
 function loadMap(){
   notes = [];
 
@@ -157,15 +158,14 @@ function gameLoop(){
 
       note.radius = 10 + progress * 120;
 
-      /* NOTE COLOR SYSTEM */
-      let colors = ["crimson","red","#ff4d4d","lightblue","blue","navy","purple"];
-      ctx.strokeStyle = colors[Math.floor(Math.random()*colors.length)];
+      // 🎨 CLEAN COLOR (better for demo)
+      ctx.strokeStyle = "crimson";
 
       ctx.beginPath();
-      ctx.arc(centerX, centerY, note.radius, 0, Math.PI*2);
+      ctx.arc(note.x, note.y, note.radius, 0, Math.PI*2);
       ctx.stroke();
 
-      /* MISS */
+      // MISS
       if(note.radius > note.maxRadius){
         note.hit = true;
         misses++;
@@ -173,7 +173,7 @@ function gameLoop(){
     }
   });
 
-  /* CURSOR */
+  // CURSOR
   ctx.beginPath();
   ctx.arc(mouse.x, mouse.y, 12, 0, Math.PI*2);
   ctx.fillStyle = "white";
@@ -191,7 +191,12 @@ canvas.addEventListener("click", () => {
 
     let diff = Math.abs(now - note.spawnTime);
 
-    if(diff < hitWindow){
+    // 🎯 DISTANCE CHECK (AIM MECHANIC)
+    let dx = mouse.x - note.x;
+    let dy = mouse.y - note.y;
+    let distance = Math.sqrt(dx*dx + dy*dy);
+
+    if(distance < note.radius && diff < hitWindow){
       note.hit = true;
 
       if(diff < 100){
@@ -204,11 +209,13 @@ canvas.addEventListener("click", () => {
 });
 
 /* ================= START GAME ================= */
+let currentMusic = null;
+
 function startGame(){
   document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
   canvas.style.display = "block";
 
-  /* RESET */
+  // RESET
   misses = 0;
   perfectHits = 0;
 
@@ -217,11 +224,11 @@ function startGame(){
   loadMap();
   gameLoop();
 
-  /* MUSIC */
+  // MUSIC (safe if file exists)
   const map = maps[currentMapIndex];
-  const music = new Audio(map.file);
-  music.volume = (localStorage.getItem("volume") || 50) / 100;
-  music.play();
+  currentMusic = new Audio(map.file);
+  currentMusic.volume = (localStorage.getItem("volume") || 50) / 100;
+  currentMusic.play().catch(()=>{});
 
   setTimeout(endGame, map.time * 1000);
 }
@@ -229,6 +236,11 @@ function startGame(){
 /* ================= END GAME ================= */
 function endGame(){
   canvas.style.display = "none";
+
+  if(currentMusic){
+    currentMusic.pause();
+    currentMusic.currentTime = 0;
+  }
 
   saveScore();
 
