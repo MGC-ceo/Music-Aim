@@ -174,6 +174,9 @@ function startGame(){
 
   setTimeout(endGame, maps[currentMapIndex].time * 1000);
 }
+const music = new Audio("assets/music/feels.mp3");
+music.volume = localStorage.getItem("volume") / 100;
+music.play();
 
 /* END GAME */
 function endGame(){
