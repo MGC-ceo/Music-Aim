@@ -1,1 +1,29 @@
+body {
+  margin: 0;
+  background: black;
+  color: white;
+  font-family: Arial;
+  text-align: center;
+}
 
+.screen {
+  padding: 20px;
+}
+
+.hidden {
+  display: none;
+}
+
+button {
+  margin: 10px;
+  padding: 10px 20px;
+  background: crimson;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+canvas {
+  display: none;
+  background: black;
+}
